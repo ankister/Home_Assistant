@@ -1,0 +1,49 @@
+blueprint:
+  name: Fermer les volets en fonction de la météo
+  description: Ferme les volets lorsque de la pluie est prévue par Météo France
+  domain: automation
+  input:
+    weather_entity:
+      name: Entité Météo
+      description: L'entité météo de Météo France (par exemple weather.ma_meteo)
+      selector:
+        entity:
+          domain: weather
+    cover_entity:
+      name: Entité des volets
+      description: L'entité des volets à fermer (par exemple cover.volet_salon)
+      selector:
+        entity:
+          domain: cover
+    forecast_hours:
+      name: Heures de prévision
+      description: Combien d'heures à l'avance pour vérifier les prévisions météorologiques
+      default: 1
+      selector:
+        number:
+          min: 1
+          max: 24
+          unit_of_measurement: heures
+
+trigger:
+  - platform: state
+    entity_id: !input weather_entity
+
+condition:
+  - condition: template
+    value_template: >
+      {% set forecast_hours = states('input_number.forecast_hours') | int %}
+      {% set weather = states(weather_entity) %}
+      {% for forecast in weather.attributes.forecast %}
+        {% if forecast.datetime | as_timestamp <= (now() + timedelta(hours=forecast_hours)).timestamp() %}
+          {% if 'rain' in forecast.condition %}
+            {{ true }}
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+      {{ false }}
+
+action:
+  - service: cover.close_cover
+    target:
+      entity_id: !input cover_entity
