@@ -1,49 +1,33 @@
 blueprint:
-  name: Fermer les volets en fonction de la météo
-  description: Ferme les volets lorsque de la pluie est prévue par Météo France
+  name: Fermer les volets en fonction de la température maximale prévue
+  description: Ferme les volets si la température maximale prévue dans la journée dépasse une certaine valeur.
   domain: automation
   input:
-    weather_entity:
-      name: Entité Météo
-      description: L'entité météo de Météo France (par exemple weather.ma_meteo)
+    temperature_max:
+      name: Température maximale
+      description: Température maximale prévue pour fermer les volets.
       selector:
-        entity:
-          domain: weather
-    cover_entity:
-      name: Entité des volets
-      description: L'entité des volets à fermer (par exemple cover.volet_salon)
+        number:
+          min: 20
+          max: 40
+          unit_of_measurement: °C
+          mode: box
+          step: 0.5
+    volet_entity:
+      name: Entité du volet
+      description: Sélectionnez l'entité du volet à contrôler.
       selector:
         entity:
           domain: cover
-    forecast_hours:
-      name: Heures de prévision
-      description: Combien d'heures à l'avance pour vérifier les prévisions météorologiques
-      default: 1
-      selector:
-        number:
-          min: 1
-          max: 24
-          unit_of_measurement: heures
 
 trigger:
-  - platform: state
-    entity_id: !input weather_entity
-
-condition:
-  - condition: template
-    value_template: >
-      {% set forecast_hours = states('input_number.forecast_hours') | int %}
-      {% set weather = states(weather_entity) %}
-      {% for forecast in weather.attributes.forecast %}
-        {% if forecast.datetime | as_timestamp <= (now() + timedelta(hours=forecast_hours)).timestamp() %}
-          {% if 'rain' in forecast.condition %}
-            {{ true }}
-          {% endif %}
-        {% endif %}
-      {% endfor %}
-      {{ false }}
+  - platform: numeric_state
+    entity_id: sensor.meteo_france_temperature_maximale
+    above: !input temperature_max
 
 action:
   - service: cover.close_cover
     target:
-      entity_id: !input cover_entity
+      entity_id: !input volet_entity
+
+mode: single
