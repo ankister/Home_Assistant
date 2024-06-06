@@ -1,0 +1,42 @@
+blueprint:
+  name: Fermer les volets selon la température maximale prévue
+  description: Ferme les volets si la température maximale prévue dans la journée dépasse une certaine valeur.
+  domain: automation
+  input:
+    temperature_max:
+      name: Température maximale
+      description: Température maximale prévue pour fermer les volets.
+      default: 25
+      selector:
+        number:
+          min: 0
+          max: 50
+          unit_of_measurement: °C
+          mode: slider
+          step: 1
+    volet_entity:
+      name: Entité des volets
+      description: Sélectionnez l'entité des volets à contrôler.
+      selector:
+        entity:
+          domain: cover
+    weather_entity:
+      name: Entité de la météo
+      description: Sélectionnez l'entité météo de Météo France.
+      selector:
+        entity:
+          domain: weather
+
+trigger:
+  - platform: template
+    value_template: >
+      {{ state_attr(input.weather_entity, 'forecast')[0].temperature > input.temperature_max }}
+
+condition: []
+
+action:
+  - service: cover.close_cover
+    target:
+      entity_id: !input volet_entity
+
+mode: single
