@@ -1,0 +1,63 @@
+blueprint:
+  name: Activer un appareil selon la température maximale prévue à une heure définie
+  description: Active un appareil si la température maximale prévue dans la journée dépasse une certaine valeur à une heure définie par l'utilisateur.
+  domain: automation
+  input:
+    temperature_max:
+      name: Température maximale
+      description: Température maximale prévue pour activer l'appareil.
+      default: 25
+      selector:
+        number:
+          min: 0
+          max: 50
+          unit_of_measurement: °C
+          mode: slider
+          step: 1
+    appareil_entity:
+      name: Entité de l'appareil
+      description: Sélectionnez l'entité de l'appareil à contrôler.
+      selector:
+        entity:
+          domain: switch
+    weather_entity:
+      name: Entité de la météo
+      description: Sélectionnez l'entité météo de Météo France.
+      selector:
+        entity:
+          domain: weather
+    activation_time:
+      name: Heure d'activation
+      description: Heure à laquelle vérifier et activer l'appareil.
+      selector:
+        time:
+  
+trigger:
+  - platform: time
+    at: !input activation_time
+
+action:
+  - service: weather.get_forecast
+    target:
+      entity_id: !input weather_entity
+    data:
+      type: daily
+
+  - wait_template: "{{ state_attr(!input weather_entity, 'forecast') is not none }}"
+    timeout: '00:01:00'  # Attend 1 minute pour les données de prévision
+
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: >
+              {{ state_attr(!input weather_entity, 'forecast')[0].temperature > (temperature_max | int) }}
+        sequence:
+          - service: switch.turn_on
+            target:
+              entity_id: !input appareil_entity
+  default:
+    - service: switch.turn_off
+      target:
+        entity_id: !input appareil_entity
+
+mode: single
