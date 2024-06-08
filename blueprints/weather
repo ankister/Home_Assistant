@@ -31,13 +31,13 @@ blueprint:
       description: Heure à laquelle vérifier et activer l'appareil.
       selector:
         time:
-  
+
 trigger:
   - platform: time
     at: !input activation_time
 
 action:
-  - service: weather.get_forecast
+  - service: weather.get_forecasts
     target:
       entity_id: !input weather_entity
     data:
